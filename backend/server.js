@@ -50,7 +50,17 @@ app.post('/api/receipt', async (req, res) => {
   try {
     const { volunteerName, donorName, donorPAN, denominations, total, email, mobileNo, address } = req.body;
 
-    const receiptNumber = `#NMF01/24-25/${receiptCounter}`;
+    const lastReceipt = await Receipt.findOne().sort({ date: -1 });
+    let lastNumber = 230; // Default starting number if no receipt exists
+
+    if (lastReceipt && lastReceipt.receiptNumber) {
+      const matches = lastReceipt.receiptNumber.match(/(\d+)$/);
+      if (matches && matches[0]) {
+        lastNumber = parseInt(matches[0]) + 1;
+      }
+    }
+
+    const receiptNumber = `#NMF01/24-25/${lastNumber}`;
     receiptCounter++;
     const pdfPath = path.join(receiptsDir, `${receiptNumber.replace(/[#/]/g, '-')}.pdf`);
 
