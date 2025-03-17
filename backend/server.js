@@ -11,13 +11,24 @@ const app = express();
 app.use(express.json());
 
 
-const allowedOrigins = ['http://52.66.201.236:3000', 'http://localhost:3000'];
+const allowedOrigins = ['http://52.66.201.236:3000'];
 
 app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Handle preflight requests
+app.options('*', cors());
+
 
 // MongoDB Connection
 mongoose.connect('mongodb://localhost:27017/donations', {
