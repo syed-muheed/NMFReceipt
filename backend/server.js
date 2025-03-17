@@ -1,3 +1,5 @@
+
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,7 +9,15 @@ const path = require('path');
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+
+
+const allowedOrigins = ['http://52.66.201.236:3000', 'http://localhost:3000'];
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
 
 // MongoDB Connection
 mongoose.connect('mongodb://localhost:27017/donations', {
