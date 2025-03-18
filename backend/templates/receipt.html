@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Donation Receipt</title>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lilita+One&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&display=swap");
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body {
+        font-family: "Noto Sans", sans-serif;
+        font-optical-sizing: auto;
+
+        font-style: normal;
+        font-variation-settings: "wdth" 100;
+
+        margin: 20px;
+        padding: 0;
+        font-size: 11px;
+      }
+      .header {
+        text-align: center;
+        background-color: #4a90e2 !important;
+        padding: 15px;
+        color: white;
+        font-size: 22px;
+      }
+      .content {
+        padding: 15px;
+      }
+      .info-box {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      .box {
+        width: 48%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background: #f9f9f9 !important;
+      }
+      .box2 {
+        padding: 15px;
+        border: 1px solid #ccc;
+        background: #f9f9f9 !important;
+        margin-top: 15px;
+        text-align: center;
+      }
+      .box3 {
+        padding: 15px;
+        border: 1px solid #ccc;
+        background: #f9f9f9 !important;
+        margin-top: 15px;
+      }
+      .boxg {
+        padding: 15px;
+        border: 1px solid #8ff4bb;
+        background: #d8f4e4 !important;
+        margin-top: 25px;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 15px;
+        padding: 10px;
+        font-size: 14px;
+        color: gray;
+      }
+      .mid {
+        display: flex;
+        justify-content: center;
+        padding-top: 18px;
+      }
+      img {
+        height: 120px;
+        margin-left: auto;
+        margin-right: auto;
+        display: flex;
+        justify-content: center;
+        margin-top: 15px;
+        overflow: hidden;
+        border-radius: 15px;
+      }
+      .sections {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 30px;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      .bord {
+        border: 1px solid #ddd;
+        margin-top: 15px;
+      }
+      .midc {
+        text-align: center;
+        display: flex;
+      }
+      .mide {
+        justify-content: space-between;
+        text-align: center;
+
+        display: flex;
+      }
+      .midb {
+        text-align: center;
+        padding-bottom: 25px;
+      }
+      .midt {
+        text-align: center;
+        padding-top: 24px;
+      }
+      .center {
+        margin-left: auto;
+        margin-right: auto;
+        width: 33%;
+      }
+      .left {
+        width: 33%;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+      }
+      .right {
+        width: 33%;
+        display: flex;
+        flex-direction: column;
+        align-items: end;
+      }
+      .top {
+        padding-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header"></div>
+    <div class=""><img src="http://localhost:5001/images/NMF.png" /></div>
+    <div class="mid">Receipt {{receiptNumber}}</div>
+
+    <div class="sections">
+      <div>
+        <div>Section 12AB Reg.No:</div>
+        <div>AAGCN5439HE20231</div>
+        <div>Corporate Identity No:</div>
+        <div>U85300TG2019NPL132903</div>
+      </div>
+      <div class="right">
+        <div>Section-80G Registration No:</div>
+        <div>AAGCN5439HF20231</div>
+        <div>Darpan ID No:</div>
+        <div>TS/2023/035306</div>
+      </div>
+    </div>
+
+    <div class="bord"></div>
+
+    <div class="content">
+      <div class="midc">
+        <div class="left">
+          <div>Amount Paid</div>
+          <div class="top">₹{{total}}</div>
+        </div>
+        <div class="center">
+          <div>Date & Time</div>
+          <div class="top">{{formattedDate}} {{formattedTime}}</div>
+        </div>
+        <div class="right">
+          <div>Payment Method</div>
+          <div class="top">Cash</div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <div class="box">
+          <p><strong>Donor Details:</strong></p>
+          <p>Name: {{donorName}}</p>
+          <p>PAN:</p>
+          <p>Email:</p>
+          <p>Phone: {{mobileNo}}</p>
+          <p>Address:</p>
+          <p>Volunteer Name: {{volunteer}}</p>
+        </div>
+        <div class="box">
+          <p><strong>Denominations:</strong></p>
+          {{denominations}}
+        </div>
+      </div>
+      <div class="box2">
+        Towards the pursuance of the main objects (Sadaqah) of Nimal Maula
+        Foundation.
+      </div>
+      <div class="boxg">Your Donation ₹{{total}}</div>
+      <div class="box3">
+        <div class="midb">
+          Any query related to this transaction, please contact Nimal Maula
+          Foundation.
+        </div>
+
+        <div class="mide">
+          <div class="left">
+            <div>Email</div>
+            <div class="top">nimalmaulafoundation@gmail.com</div>
+          </div>
+          <div class="center1">
+            <div>Website</div>
+            <div class="top">www.nimalmaulafoundation.org</div>
+          </div>
+          <div class="right">
+            <div>Contact</div>
+            <div class="top">9000336645</div>
+          </div>
+        </div>
+        <div class="midt">
+          16-2-753/1/404, Konark Towers, Andhra Bank Colony,
+          Dilsukhnagar.,,,Hyderabad, Telangana - 500036
+        </div>
+      </div>
+
+      <div class="box2">
+        The donations to Nimal Maula Foundation are eligible for appropriate
+        deduction(s) u/s 80G of the Income Tax Act, 1961. Nimal Maula Foundation
+        further undertakes to confirm that it shall subsequently file its
+        'Annual Return of Donations' online on Form-10BD on or before the due
+        date prescribed under the Income Tax Rules, 1962 which is 31st May
+        following the end of financial year. Therefore, the amount(s) of
+        donation(s) given today may be reflected in Donor' Annual Information
+        Statement (AIS) by 30th June..
+      </div>
+    </div>
+  </body>
+</html>

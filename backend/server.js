@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 
 
-const allowedOrigins = ['http://52.66.201.236:3000',"http://localhost:3001"];
+const allowedOrigins = ['http://52.66.201.236:3000',"http://localhost:3001","http://localhost:3000"];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -30,6 +30,7 @@ app.use(cors({
 app.options('*', cors());
 
 app.use('/receipts', express.static(path.join(__dirname, 'receipts')));
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 
 
@@ -70,81 +71,77 @@ if (!fs.existsSync(receiptsDir)) {
 }
 
 // API to Generate Receipt
+const puppeteer = require('puppeteer');
+const imagePath = path.join(__dirname, 'images', 'NMF.png');
+
+
 app.post('/api/receipt', async (req, res) => {
     try {
-      const { volunteerName, donorName, donorPAN, denominations, total, email, mobileNo, address } = req.body;
-  
-      const lastReceipt = await Receipt.findOne().sort({ date: -1 });
-      let lastNumber = 230; // Default starting number if no receipt exists
-  
-      if (lastReceipt && lastReceipt.receiptNumber) {
-        const matches = lastReceipt.receiptNumber.match(/(\d+)$/);
-        if (matches && matches[0]) {
-          lastNumber = parseInt(matches[0]) + 1;
+        const { volunteerName, donorName, donorPAN, denominations, total, email, mobileNo, address } = req.body;
+
+        const lastReceipt = await Receipt.findOne().sort({ date: -1 });
+        let lastNumber = 230;
+
+        if (lastReceipt && lastReceipt.receiptNumber) {
+            const matches = lastReceipt.receiptNumber.match(/(\d+)$/);
+            if (matches && matches[0]) {
+                lastNumber = parseInt(matches[0]) + 1;
+            }
         }
-      }
-  
-      const receiptNumber = `#NMF01/24-25/${lastNumber}`;
-      const pdfFileName = `${receiptNumber.replace(/[#/]/g, '-')}.pdf`;
-      const pdfPath = path.join(__dirname, 'receipts', pdfFileName);
-  
-      const currentDateTime = new Date();
-      const formattedDate = currentDateTime.toLocaleDateString();
-      const formattedTime = currentDateTime.toLocaleTimeString();
-  
-      console.log('Saving PDF at:', pdfPath);
-  
-      const doc = new pdf({ margin: 50 });
-  
-      // Ensure the receipts directory exists
-      if (!fs.existsSync(path.join(__dirname, 'receipts'))) {
-        fs.mkdirSync(path.join(__dirname, 'receipts'));
-      }
-  
-      const writeStream = fs.createWriteStream(pdfPath);
-  
-      // Handle stream errors
-      writeStream.on('error', (err) => {
-        console.error('Error writing PDF:', err);
-        return res.status(500).json({ message: 'Failed to write PDF', error: err.message });
-      });
-  
-      doc.pipe(writeStream);
-  
-      // Draw top and bottom colored bars
-      doc.rect(0, 0, doc.page.width, 50).fill('#4A90E2');
-      doc.rect(0, doc.page.height - 50, doc.page.width, 50).fill('#4A90E2');
-  
-      // Insert Image
-      const imagePath = 'images/NMF.png';
-      if (fs.existsSync(imagePath)) {
-        doc.image(imagePath, doc.page.width / 2 - 45, 50, { width: 90 });
-      } else {
-        console.error('Image not found:', imagePath);
-      }
-  
-      doc.moveDown(7);
-  
-      // Header Text
-      doc.fontSize(12).fillColor('#7e7e7e').text('Nimal Maula Foundation', { align: 'center' });
-      doc.fontSize(12).text(`Receipt: ${receiptNumber}`, { align: 'center' });
-  
-      doc.moveDown(2);
-      doc.strokeColor('#7e7e7e').moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown(2);
-  
-      // Receipt Details
-      doc.fillColor('#849091');
-      doc.text(`Amount Paid: ₹${total}`, { align: 'left' });
-      doc.text(`Date & Time: ${formattedDate} ${formattedTime}`, { align: 'center' });
-      doc.text(`Payment Method: Cash`, { align: 'right' });
-  
-      doc.moveDown();
-  
-      // Save PDF and respond once it’s fully written
-      writeStream.on('finish', async () => {
-        try {
-          const receipt = new Receipt({
+
+        const receiptNumber = `#NMF01/24-25/${lastNumber}`;
+        const pdfFileName = `${receiptNumber.replace(/[#/]/g, '-')}.pdf`;
+        const pdfPath = path.join(__dirname, 'receipts', pdfFileName);
+
+        const currentDateTime = new Date();
+        const formattedDate = currentDateTime.toLocaleDateString();
+        const formattedTime = currentDateTime.toLocaleTimeString();
+
+        console.log('Saving PDF at:', pdfPath);
+
+        // Read the HTML template
+        let template = fs.readFileSync(path.join(__dirname, 'templates', 'receipt.html'), 'utf8');
+
+        // Replace placeholders with actual values
+        template = template.replace('{{receiptNumber}}', receiptNumber)
+            .replace('{{formattedDate}}', formattedDate)
+            .replace('{{formattedTime}}', formattedTime)
+            .replace('{{donorName}}', donorName)
+            .replace('{{donorPAN}}', donorPAN)
+            .replace('{{email}}', email)
+            .replace('{{mobileNo}}', mobileNo)
+            .replace('{{volunteer}}', volunteerName)
+            .replace('{{address}}', address)
+            .replace(/{{total}}/g, total)
+            .replace('{{imagePath}}', `file://${imagePath}`);
+
+        // Convert denominations to HTML
+        let denominationsHTML = '';
+        Object.entries(denominations).forEach(([denom, count]) => {
+            denominationsHTML += `<p>${denom} Rs x ${count} = ₹${denom * count}</p>`;
+        });
+        template = template.replace('{{denominations}}', denominationsHTML);
+
+        // Generate PDF using Puppeteer
+        const browser = await puppeteer.launch({ headless: 'new' });
+        const page = await browser.newPage();
+        await page.setContent(template, { waitUntil: 'domcontentloaded' });
+
+        // ✅ Force Background Color
+        await page.evaluate(() => {
+            document.body.style.background = '#f4f4f4'; // Ensure background is applied
+        });
+
+        // ✅ Ensure fonts are fully loaded before rendering
+        await page.evaluateHandle('document.fonts.ready');
+
+        // ✅ Generate the PDF with Background
+        await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+
+        await browser.close();
+
+        // Save receipt to MongoDB
+        const receipt = new Receipt({
             volunteerName,
             donorName,
             donorPAN,
@@ -155,29 +152,37 @@ app.post('/api/receipt', async (req, res) => {
             total,
             receiptNumber,
             pdfPath,
-          });
-  
-          await receipt.save();
-          console.log('Receipt saved successfully:', receipt);
-  
-          // Send response only once after PDF is saved
-          res.json({
+        });
+
+        await receipt.save();
+        console.log('Receipt saved successfully:', receipt);
+
+        // Respond with PDF URL
+        res.json({
             message: 'Receipt Generated and Saved',
             receipt,
-            pdfUrl: `http://52.66.201.236:5001/receipts/${pdfFileName}`,
-          });
-        } catch (err) {
-          console.error('Error saving receipt:', err);
-          res.status(500).json({ message: 'Failed to save receipt', error: err.message });
-        }
-      });
-  
-      doc.end();
+            pdfUrl: `http://localhost:5001/receipts/${pdfFileName}`,
+        });
+
     } catch (err) {
-      console.error('Error:', err);
-      res.status(500).json({ message: 'Internal Server Error', error: err.message });
+        console.error('Error:', err);
+        res.status(500).json({ message: 'Internal Server Error', error: err.message });
     }
-  });
+});
+
+app.get('/api/download/:filename', (req, res) => {
+    const filePath = path.join(__dirname, 'receipts', req.params.filename);
+
+    // Check if the file exists
+    if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.download(filePath); // This will trigger the file download
+    } else {
+        res.status(404).json({ message: 'File not found' });
+    }
+});
+
   
 
 app.listen(5001, () => console.log('Server running on port 5001'));
