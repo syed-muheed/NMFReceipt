@@ -35,10 +35,7 @@ app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 
 // MongoDB Connection
-mongoose.connect('mongodb://localhost:27017/donations', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
+mongoose.connect('mongodb://localhost:27017/donations').then(() => {
   console.log('MongoDB Connected');
 }).catch((err) => {
   console.error('MongoDB Connection Error:', err);
@@ -61,7 +58,7 @@ const receiptSchema = new mongoose.Schema({
 
 const Receipt = mongoose.model('Receipt', receiptSchema);
 
-let receiptCounter = 230;
+let receiptCounter = 1;
 
 // Ensure Receipts Directory Exists
 const receiptsDir = path.join(__dirname, 'receipts');
@@ -80,7 +77,7 @@ app.post('/api/receipt', async (req, res) => {
         const { volunteerName, donorName, donorPAN, denominations, total, email, mobileNo, address } = req.body;
 
         const lastReceipt = await Receipt.findOne().sort({ date: -1 });
-        let lastNumber = 230;
+        let lastNumber = 1;
 
         if (lastReceipt && lastReceipt.receiptNumber) {
             const matches = lastReceipt.receiptNumber.match(/(\d+)$/);
@@ -89,7 +86,7 @@ app.post('/api/receipt', async (req, res) => {
             }
         }
 
-        const receiptNumber = `#NMF01/24-25/${lastNumber}`;
+        const receiptNumber = `#NMF01/24-25/FSJB${lastNumber}`;
         const pdfFileName = `${receiptNumber.replace(/[#/]/g, '-')}.pdf`;
         const pdfPath = path.join(__dirname, 'receipts', pdfFileName);
 
@@ -101,6 +98,7 @@ app.post('/api/receipt', async (req, res) => {
 
         // Read the HTML template
         let template = fs.readFileSync(path.join(__dirname, 'templates', 'receipt.html'), 'utf8');
+
 
         // Replace placeholders with actual values
         template = template.replace('{{receiptNumber}}', receiptNumber)
@@ -116,11 +114,19 @@ app.post('/api/receipt', async (req, res) => {
             .replace('{{imagePath}}', `file://${imagePath}`);
 
         // Convert denominations to HTML
-        let denominationsHTML = '';
+        let denominationsTable = "";
         Object.entries(denominations).forEach(([denom, count]) => {
-            denominationsHTML += `<p>${denom} Rs x ${count} = ₹${denom * count}</p>`;
+            if (count > 0) {
+             const total = denom * count;
+             denominationsTable += `
+             <tr> <td style="border: 1px solid #ccc; padding: 8px;">${denom} Rs</td>
+                  <td style="border: 1px solid #ccc; padding: 8px;">${count}</td> 
+            <td style="border: 1px solid #ccc; padding: 8px; display:flex; text-align:right;">₹ ${total}</td>
+            </tr>
+           `;
+        }
         });
-        template = template.replace('{{denominations}}', denominationsHTML);
+        template = template.replace("{{denominationsTable}}", denominationsTable);
 
         // Generate PDF using Puppeteer
         const browser = await puppeteer.launch({ headless: 'new' });
@@ -161,7 +167,7 @@ app.post('/api/receipt', async (req, res) => {
         res.json({
             message: 'Receipt Generated and Saved',
             receipt,
-            pdfUrl: `http://localhost:5001/receipts/${pdfFileName}`,
+            pdfUrl: `http://52.66.201.236:5001/receipts/${pdfFileName}`,
         });
 
     } catch (err) {
