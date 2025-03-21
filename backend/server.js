@@ -71,6 +71,81 @@ if (!fs.existsSync(receiptsDir)) {
 const puppeteer = require('puppeteer');
 const imagePath = path.join(__dirname, 'images', 'NMF.png');
 
+function numberToWords(num) {
+  const a = [
+    "",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+  ];
+  const b = [
+    "",
+    "",
+    "twenty",
+    "thirty",
+    "forty",
+    "fifty",
+    "sixty",
+    "seventy",
+    "eighty",
+    "ninety",
+  ];
+  const g = ["", "thousand", "million", "billion", "trillion"];
+
+  if (num === 0) return "zero";
+
+  let words = "";
+
+  function chunk(num) {
+    if (num === 0) return "";
+    if (num < 20) return a[num];
+    if (num < 100)
+      return b[Math.floor(num / 10)] + (num % 10 ? " " + a[num % 10] : "");
+    if (num < 1000)
+      return (
+        a[Math.floor(num / 100)] +
+        " hundred" +
+        (num % 100 ? " and " + chunk(num % 100) : "")
+      );
+    return "";
+  }
+
+  function toWords(num) {
+    let result = "";
+    let group = 0;
+
+    while (num > 0) {
+      let word = chunk(num % 1000);
+      if (word)
+        result =
+          word +
+          (g[group] ? " " + g[group] : "") +
+          (result ? " " + result : "");
+      num = Math.floor(num / 1000);
+      group++;
+    }
+
+    return result.trim();
+  }
+
+  return toWords(num);
+}
 
 app.post('/api/receipt', async (req, res) => {
     try {
@@ -86,7 +161,8 @@ app.post('/api/receipt', async (req, res) => {
             }
         }
 
-        const receiptNumber = `#NMF01/24-25/FSJB${lastNumber}`;
+        const totalInWords = numberToWords(total).toUpperCase();
+        const receiptNumber = `#NMF01/24-25/FSJB-0${lastNumber}`;
         const pdfFileName = `${receiptNumber.replace(/[#/]/g, '-')}.pdf`;
         const pdfPath = path.join(__dirname, 'receipts', pdfFileName);
 
@@ -100,18 +176,39 @@ app.post('/api/receipt', async (req, res) => {
         let template = fs.readFileSync(path.join(__dirname, 'templates', 'receipt.html'), 'utf8');
 
 
+        const donorDetailsTable = `
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Donor Name</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">${donorName}</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Donor PAN</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">${donorPAN}</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Email</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">${email}</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Mobile Number</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">${mobileNo}</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Address</td>
+    <td style="border: 1px solid #ccc; padding: 8px;"></td>
+  </tr>
+`;
         // Replace placeholders with actual values
-        template = template.replace('{{receiptNumber}}', receiptNumber)
-            .replace('{{formattedDate}}', formattedDate)
-            .replace('{{formattedTime}}', formattedTime)
-            .replace('{{donorName}}', donorName)
-            .replace('{{donorPAN}}', donorPAN)
-            .replace('{{email}}', email)
-            .replace('{{mobileNo}}', mobileNo)
-            .replace('{{volunteer}}', volunteerName)
-            .replace('{{address}}', address)
-            .replace(/{{total}}/g, total)
-            .replace('{{imagePath}}', `file://${imagePath}`);
+        template = template
+      .replace("{{receiptNumber}}", receiptNumber)
+      .replace("{{formattedDate}}", formattedDate)
+      .replace("{{formattedTime}}", formattedTime)
+      .replace("{{donorDetailsTable}}", donorDetailsTable)
+      .replace("{{volunteer}}", volunteerName)
+      .replace("{{address}}", address)
+      .replace(/{{total}}/g, total)
+      .replace('{{totalInWords}}', totalInWords)
+      .replace("{{imagePath}}", `file://${imagePath}`);
 
         // Convert denominations to HTML
         let denominationsTable = "";
